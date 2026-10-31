@@ -1,8 +1,6 @@
-import nest_asyncio
-nest_asyncio.apply()
-
 from flask import Flask, request, jsonify
-import g4f
+import requests
+import urllib.parse
 
 app = Flask(__name__)
 
@@ -14,36 +12,33 @@ def home():
 def chat():
     try:
         data = request.json
-        if not data:
-            return jsonify({"error": "No JSON payload received"}), 400
-            
         prompt = data.get('prompt', '')
         ui_model = data.get('model', 'ChatGPT')
         
+        # Pollinations models: 'openai' (GPT-4o), 'claude', 'llama'
         if ui_model == 'ChatGPT':
-            target_model = 'gpt-4o'
+            target = 'openai'
         elif ui_model == 'Claude':
-            target_model = 'claude-3.5-sonnet'
+            target = 'claude'
         else:
-            target_model = 'llama-3.1-70b'
+            target = 'llama'
             
-        # Dynamically fetch an API-only provider that requires zero browser dependencies
-        safe_provider = getattr(g4f.Provider, 'PollinationsAI', getattr(g4f.Provider, 'Blackbox', None))
-            
-        response = g4f.ChatCompletion.create(
-            model=target_model,
-            messages=[{"role": "user", "content": prompt}],
-            provider=safe_provider
-        )
+        # Direct HTTP POST call - Zero headless browsers needed
+        url = "https://text.pollinations.ai/"
+        payload = {
+            "messages": [{"role": "user", "content": prompt}],
+            "model": target
+        }
         
-        answer = response if isinstance(response, str) else "".join(response)
-            
-        return jsonify({"response": answer})
+        response = requests.post(url, json=payload)
         
+        if response.status_code == 200:
+            return jsonify({"response": response.text})
+        else:
+            return jsonify({"error": f"API Blocked: {response.status_code}"}), 500
+            
     except Exception as e:
-        error_msg = str(e)
-        print(f"🔥 SERVER ERROR: {error_msg}")
-        return jsonify({"error": error_msg}), 500
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
