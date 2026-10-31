@@ -2,13 +2,9 @@ import nest_asyncio
 nest_asyncio.apply()
 
 from flask import Flask, request, jsonify
-from g4f.client import Client
-
-# 🚀 PROPER IMPORT: Yahan hum explicitly Blackbox ko import kar rahe hain
-from g4f.Provider import Blackbox
+import g4f
 
 app = Flask(__name__)
-client = Client()
 
 @app.route('/', methods=['GET'])
 def home():
@@ -24,7 +20,7 @@ def chat():
         prompt = data.get('prompt', '')
         ui_model = data.get('model', 'ChatGPT')
         
-        # Model mapping
+        # Model routing
         if ui_model == 'ChatGPT':
             target_model = 'gpt-4o'
         elif ui_model == 'Claude':
@@ -32,19 +28,30 @@ def chat():
         else:
             target_model = 'meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo'
             
-        # ✨ Direct imported Blackbox provider ko use kar rahe hain
-        response = client.chat.completions.create(
+        # 🚀 BULLETPROOF PROVIDER FETCH (No Import Errors!)
+        # Agar Blackbox nahi mila, toh server crash nahi hoga, chupchap DDG par chala jayega
+        safe_provider = getattr(g4f.Provider, 'Blackbox', None)
+        if safe_provider is None:
+            safe_provider = getattr(g4f.Provider, 'DuckDuckGo', None)
+            
+        # 🔥 Client wrapper hata kar direct aur stable ChatCompletion use kiya
+        response = g4f.ChatCompletion.create(
             model=target_model,
-            provider=Blackbox, 
-            messages=[{"role": "user", "content": prompt}]
+            messages=[{"role": "user", "content": prompt}],
+            provider=safe_provider
         )
         
-        answer = response.choices[0].message.content
+        # Output clean karke app ko bhej diya
+        if isinstance(response, str):
+            answer = response
+        else:
+            answer = "".join(response)
+            
         return jsonify({"response": answer})
         
     except Exception as e:
         error_msg = str(e)
-        print(f"🔥 SERVER CRASHED: {error_msg}")
+        print(f"🔥 SERVER ERROR: {error_msg}")
         return jsonify({"error": error_msg}), 500
 
 if __name__ == '__main__':
