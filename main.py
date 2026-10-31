@@ -2,8 +2,10 @@ import nest_asyncio
 nest_asyncio.apply()
 
 from flask import Flask, request, jsonify
-import g4f
 from g4f.client import Client
+
+# 🚀 PROPER IMPORT: Yahan hum explicitly Blackbox ko import kar rahe hain
+from g4f.Provider import Blackbox
 
 app = Flask(__name__)
 client = Client()
@@ -22,20 +24,18 @@ def chat():
         prompt = data.get('prompt', '')
         ui_model = data.get('model', 'ChatGPT')
         
-        # 🚀 FORCE A STRICTLY FREE PROVIDER (Bypass g4f.dev Cake Credits)
+        # Model mapping
         if ui_model == 'ChatGPT':
             target_model = 'gpt-4o'
-            target_provider = g4f.Provider.Blackbox
         elif ui_model == 'Claude':
             target_model = 'claude-3.5-sonnet'
-            target_provider = g4f.Provider.Blackbox
         else:
             target_model = 'meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo'
-            target_provider = g4f.Provider.Blackbox
             
+        # ✨ Direct imported Blackbox provider ko use kar rahe hain
         response = client.chat.completions.create(
             model=target_model,
-            provider=target_provider, # 🔥 THE MAGIC SHIELD: Blocks 402 errors!
+            provider=Blackbox, 
             messages=[{"role": "user", "content": prompt}]
         )
         
