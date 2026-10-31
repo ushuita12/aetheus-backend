@@ -20,32 +20,23 @@ def chat():
         prompt = data.get('prompt', '')
         ui_model = data.get('model', 'ChatGPT')
         
-        # Model routing
         if ui_model == 'ChatGPT':
             target_model = 'gpt-4o'
         elif ui_model == 'Claude':
             target_model = 'claude-3.5-sonnet'
         else:
-            target_model = 'meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo'
+            target_model = 'llama-3.1-70b'
             
-        # 🚀 BULLETPROOF PROVIDER FETCH (No Import Errors!)
-        # Agar Blackbox nahi mila, toh server crash nahi hoga, chupchap DDG par chala jayega
-        safe_provider = getattr(g4f.Provider, 'Blackbox', None)
-        if safe_provider is None:
-            safe_provider = getattr(g4f.Provider, 'DuckDuckGo', None)
+        # Dynamically fetch an API-only provider that requires zero browser dependencies
+        safe_provider = getattr(g4f.Provider, 'PollinationsAI', getattr(g4f.Provider, 'Blackbox', None))
             
-        # 🔥 Client wrapper hata kar direct aur stable ChatCompletion use kiya
         response = g4f.ChatCompletion.create(
             model=target_model,
             messages=[{"role": "user", "content": prompt}],
             provider=safe_provider
         )
         
-        # Output clean karke app ko bhej diya
-        if isinstance(response, str):
-            answer = response
-        else:
-            answer = "".join(response)
+        answer = response if isinstance(response, str) else "".join(response)
             
         return jsonify({"response": answer})
         
